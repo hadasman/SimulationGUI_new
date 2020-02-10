@@ -3,13 +3,9 @@ from collections import OrderedDict
 import sys, pdb, matplotlib, os
 import numpy as np
 
-os.chdir('../function_scripts')
-from neuron import h, gui
-
 matplotlib.use("TkAgg")
 
 os.chdir('../function_scripts')
-from synapse_functions import PutSyns, PutSynsOnSpines, PutSpines
 import synapse_functions
 
 # Keep at end of imports
@@ -54,6 +50,7 @@ def UpdateEntryParams(Simulator, GUI):
 			exec(item + " = %s"%float(temp_val))
 
 	# Set spine parameters manually
+	# !Add Simulator.UpdateSpines()
 	if Simulator.spines_exist:
 		for spine in Simulator.spine_necks:
 			spine.diam = Simulator.neck_diam
@@ -64,7 +61,7 @@ def UpdateEntryParams(Simulator, GUI):
 			spine.L = Simulator.head_radius
 
 	# Set synapse parameters manually
-	exc_tstart = 100
+	exc_tstart = 100 # ! Magic number outside function or inside Simulator
 	inh_tstart = exc_tstart + Simulator.dEI
 	for att in ['exc_tstart', 'inh_tstart']:
 		setattr(synapse_functions, att, eval(att))
@@ -173,9 +170,9 @@ def AddSoma_callback():
 		
 		h.disconnect(sec=Simulator.soma)
 		Simulator.dend.connect(Simulator.soma, 1, 0) # Disconnect from parents if exist (following weird bug in which soma was created as child of last created section (spine head))
-		h.define_shape()
+		h.define_shape() # !Explain this
 
-		GUI.Buttons['AddSoma']['text'] = 'Remove Soma'
+		GUI.Buttons['AddSoma']['text'] = 'Remove Soma' #!Toggle soma function inside GUI
 		GUI.RadioButtons['volt_loc']['Buttons'][2].config(state='normal')
 
 	elif GUI.Buttons['AddSoma']['text'] == 'Remove Soma':
@@ -190,7 +187,7 @@ def AddSoma_callback():
 	UpdatePresentedValues(GUI.ChangingLabels)
 
 def RunSim_callback():
-
+	# !Insert most of this to Simulator
 	for button in GUI.Buttons:
 		if button is not 'Reset':
 			GUI.Buttons[button].config(state='disabled')
@@ -314,12 +311,13 @@ def EntryTracking_callback(a, b, c):
 			'Warning: You changed something! Press \'Update Morphology\' to implement changes before running simulation')
 
 # ================================================ Initialize Parameters =================================================
-
+#! Add logs
 colors = {	'dend': 'black', 
 			'soma': 'lightblue', 
 			'spine_neck': 'royalblue', 
 			'spine_head': 'darkblue'}
 
+# !Get this inside Simulator and if arguments not given, default to it
 UserParamDict = {
 'simulation': OrderedDict([
 	('dend.L', [u'Branch Length [\u03BCm]', 80]), 
@@ -344,11 +342,12 @@ UserParamDict = {
 	('neck_diam', [u'Neck diam [\u03BCm]', 0.0394]),
 	('neck_L', [u'Neck L [\u03BCm]', 1]),
 	('neck_Ra', [u'Neck Ra (per unit area) [\u03A9-cm]', 50]),
-	('head_radius', [u'Head radius [\u03BCm]', 0.297])
+	('head_radius', [u'Head radius [\u03BCm]', 0.297])	
 	]),
 'soma': OrderedDict([
 	('soma.diam', [u'diam [\u03BCm]', 10]),
-	('soma.cm', [u'Cm [\u03BCF/cm\u00B2]', 1])
+	('soma.cm', [u'Cm [\u03BCF/cm\u00B2]', 1]),
+	('dend.Ra', ['Ra', 110])
 	])
 }
 
@@ -368,7 +367,6 @@ Simulator.CreateCompartment('dend',
 	e_pas = UserParamDict['simulation']['h.v_init'][1], 
 	g_pas = 1.0 / 1500.0, 
 	nseg = int(UserParamDict['simulation']['dend.L'][1]) * 5)
-
 
 # ================================================ Create GUI - Main Window (root) =================================================	
 GUI.AddLabel(GUI, text='Cable Simulation GUI', font=('TkDefaultFont', 30), foreground='darkred', background='white', sticky='W')

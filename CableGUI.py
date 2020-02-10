@@ -11,6 +11,8 @@ except: # For python2
 	import ttk, messagebox
 	from matplotlib.backends.backend_tkagg import NavigationToolbar2TkAgg
 
+# import pdb
+# import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
