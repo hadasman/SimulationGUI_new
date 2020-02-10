@@ -14,6 +14,7 @@ import synapse_functions
 from CableGUI import *
 from Simulators import *
 
+##### Update in original file
 # =========================== Updates Functions (connection between GUI and Simulator) ===========================
 def UpdateEntryParams(Simulator, GUI):
 
