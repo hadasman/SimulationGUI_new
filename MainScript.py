@@ -53,7 +53,6 @@ def UpdateEntryParams(Simulator, GUI):
 			exec(item + " = %s"%float(temp_val))
 
 	# Set spine parameters manually
-	# !Add Simulator.UpdateSpines()
 	if Simulator.spines_exist:
 		Simulator.UpdateSpineParams('neck', diam = Simulator.neck_diam,
 											L = Simulator.neck_L,
@@ -62,7 +61,6 @@ def UpdateEntryParams(Simulator, GUI):
 											L = Simulator.head_radius*2)
 
 	# Set synapse parameters manually
-
 	exc_tstart = Simulator.t_start
 	inh_tstart = exc_tstart + Simulator.dEI
 	for att in ['exc_tstart', 'inh_tstart']:
@@ -292,7 +290,6 @@ colors = {	'dend': 'black',
 			'spine_head': 'darkblue'}
 
 # !Get this inside Simulator and if arguments not given, default to it
-
 # All elements in this dictionary will appear as entries in GUI (separate keys for separate blocks)
 UserParamDict = {
 'simulation': OrderedDict([
@@ -322,8 +319,7 @@ UserParamDict = {
 	]),
 'soma': OrderedDict([
 	('soma.diam', [u'diam [\u03BCm]', 10]),
-	('soma.cm', [u'Cm [\u03BCF/cm\u00B2]', 1]),
-	('dend.Ra', ['Ra', 110])
+	('soma.cm', [u'Cm [\u03BCF/cm\u00B2]', 1])	
 	])
 }
 
