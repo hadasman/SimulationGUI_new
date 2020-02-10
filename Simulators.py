@@ -147,9 +147,10 @@ class Simulators():
 			elif dist_ == 'Freeze':
 				if current_locs:
 					locs = current_locs
+					print(current_locs)
 
 				else:
-					# In case someone manages to try and freeze non-existing locations
+					# In case someone manages to try and freeze non-existing locations (shouldn't be possible)
 					error_meg = 'Error in synapse locations: Nothing to freeze. Defaulting to Uniform placement...'
 					print(error_msg)
 					self.GUI.PopMessageBox(error_msg)
@@ -256,7 +257,6 @@ class Simulators():
 			raise Exception('Invalid spine part!')
 
 		for attribute in kwargs:
-			pdb.set_trace()
 			for spine in spines:
 				setattr(spine, attribute, kwargs[attribute])
 
