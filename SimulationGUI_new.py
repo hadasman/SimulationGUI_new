@@ -414,7 +414,7 @@ GUI.RadioButtons['volt_loc']['Buttons'][2].config(state='disabled')
 UpdateSynLocs()
 Simulator.PlaceSynapses('exc')
 Simulator.PlaceSynapses('inh')
-GUI.DrawSections(colors)
+GUI.DrawSections(colors) 
 
 print('*****\nTO DO:\n \
 	- After defaulting to uniform locations change exc_dense to \'Uniform\'\
