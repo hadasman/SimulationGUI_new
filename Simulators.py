@@ -1,11 +1,8 @@
-import os
+import os, pdb
 from neuron import h, gui
 os.chdir('../function_scripts')
 from synapse_functions import PutSyns, PutSynsOnSpines, PutSpines
 import synapse_functions
-
-import copy
-import pdb
 import numpy as np
 
 class Simulators():
@@ -21,6 +18,7 @@ class Simulators():
 		self.spine_heads	= None
 		self.spine_necks	= None
 		self.spines_exist	= False
+		self.t_start		= 100
 
 		for item in InitDict:
 			temp_val = InitDict[item][1]
@@ -36,11 +34,11 @@ class Simulators():
 			elif 'h.' in item:				
 				exec(item + " = %s"%float(temp_val))
 
-		exc_tstart = 100
+		# Set global variables for imported modules
+		exc_tstart = self.t_start
 		inh_tstart = exc_tstart + InitDict['dEI'][1]
 		for att in ['exc_tstart', 'inh_tstart']:
 			setattr(synapse_functions, att, eval(att))
-
 
 	def CreateCompartment(self, sec_name, **kwargs):
 
@@ -149,9 +147,10 @@ class Simulators():
 			elif dist_ == 'Freeze':
 				if current_locs:
 					locs = current_locs
+					print(current_locs)
 
 				else:
-					# In case someone manages to try and freeze non-existing locations
+					# In case someone manages to try and freeze non-existing locations (shouldn't be possible)
 					error_meg = 'Error in synapse locations: Nothing to freeze. Defaulting to Uniform placement...'
 					print(error_msg)
 					self.GUI.PopMessageBox(error_msg)
@@ -207,3 +206,62 @@ class Simulators():
 			where_syns = 2 # For now inhibitory synapses always on shaft
 			self.inh_synapses, self.inh_netstim, self.inh_netcon = PutSyns(self.dend, self.inh_locs, 'inh', weight=self.inh_g_max)
 			self.n_inh = len(self.inh_synapses)
+
+	def RunSim(self):
+
+		num_iters = 60
+		recovered_thresh = -40
+
+		# Prepare simulation
+		record_loc_idx = int(self.n_exc/2)
+		record_loc = self.exc_locs[record_loc_idx]
+
+		# Prepare recording vectors
+		t = h.Vector(); t.record(h._ref_t)
+		shaft_v = h.Vector(); shaft_v.record(self.dend(record_loc)._ref_v)
+
+		if self.soma:
+			soma_v = h.Vector(); soma_v.record(self.soma(0.5)._ref_v)
+		else:
+			soma_v = [] # Reset soma_v between simulations
+
+		if self.spine_heads:
+			spine_v = h.Vector(); spine_v.record(self.spine_heads[record_loc_idx](1)._ref_v)
+		else:
+			spine_v = [] # Reset spine_v between simulations
+
+		# Run simulation (hoc interpreter commands)
+		h.finitialize() # Initialize gating mechanisms
+		h.run()			# Run simulation
+
+		# Plot traces
+		self.vectors['t'] = t
+		self.vectors['shaft_v'] = shaft_v
+		self.vectors['soma_v'] = soma_v
+		self.vectors['spine_v'] = spine_v
+
+	def UpdateSpineParams(self, spine_part, **kwargs):
+		'''
+		Update spine parameters (necks or heads), according to user-given spine part.
+		Inputs:
+			- spine_part: (string) indicates which spine part to update (head/neck)
+			- kwargs: all parameters (see Section parameters in hoc interpreter) that 
+					  will be updated in the specified Section during this function.
+		'''
+
+		if 'head' in spine_part:
+			spines = self.spine_heads
+		elif 'neck' in spine_part:
+			spines = self.spine_necks
+		else:
+			raise Exception('Invalid spine part!')
+
+		for attribute in kwargs:
+			for spine in spines:
+				setattr(spine, attribute, kwargs[attribute])
+
+
+
+
+
+

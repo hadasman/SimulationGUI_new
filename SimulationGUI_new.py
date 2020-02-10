@@ -4,12 +4,10 @@ import sys, pdb, matplotlib, os
 import numpy as np
 
 os.chdir('../function_scripts')
-from neuron import h, gui
-
+from neuron import gui,h
 matplotlib.use("TkAgg")
 
 os.chdir('../function_scripts')
-from synapse_functions import PutSyns, PutSynsOnSpines, PutSpines
 import synapse_functions
 
 # Keep at end of imports
@@ -55,16 +53,14 @@ def UpdateEntryParams(Simulator, GUI):
 
 	# Set spine parameters manually
 	if Simulator.spines_exist:
-		for spine in Simulator.spine_necks:
-			spine.diam = Simulator.neck_diam
-			spine.L = Simulator.neck_L
-			spine.Ra = Simulator.neck_Ra
-		for spine in Simulator.spine_heads:
-			spine.diam = Simulator.head_radius
-			spine.L = Simulator.head_radius
+		Simulator.UpdateSpineParams('neck', diam = Simulator.neck_diam,
+											L = Simulator.neck_L,
+											Ra = Simulator.neck_Ra)
+		Simulator.UpdateSpineParams('head', diam = Simulator.head_radius*2,
+											L = Simulator.head_radius*2)
 
 	# Set synapse parameters manually
-	exc_tstart = 100
+	exc_tstart = Simulator.t_start
 	inh_tstart = exc_tstart + Simulator.dEI
 	for att in ['exc_tstart', 'inh_tstart']:
 		setattr(synapse_functions, att, eval(att))
@@ -173,9 +169,9 @@ def AddSoma_callback():
 		
 		h.disconnect(sec=Simulator.soma)
 		Simulator.dend.connect(Simulator.soma, 1, 0) # Disconnect from parents if exist (following weird bug in which soma was created as child of last created section (spine head))
-		h.define_shape()
+		h.define_shape() # !Explain this
 
-		GUI.Buttons['AddSoma']['text'] = 'Remove Soma'
+		GUI.Buttons['AddSoma']['text'] = 'Remove Soma' #!Toggle soma function inside GUI
 		GUI.RadioButtons['volt_loc']['Buttons'][2].config(state='normal')
 
 	elif GUI.Buttons['AddSoma']['text'] == 'Remove Soma':
@@ -190,41 +186,13 @@ def AddSoma_callback():
 	UpdatePresentedValues(GUI.ChangingLabels)
 
 def RunSim_callback():
-
+	# !Insert most of this to Simulator
 	for button in GUI.Buttons:
 		if button is not 'Reset':
 			GUI.Buttons[button].config(state='disabled')
 
-	num_iters = 60
-	recovered_thresh = -40
+	Simulator.RunSim()
 
-	# Prepare simulation
-	record_loc_idx = int(Simulator.n_exc/2)
-	record_loc = Simulator.exc_locs[record_loc_idx]
-
-	# Prepare recording vectors
-	t = h.Vector(); t.record(h._ref_t)
-	shaft_v = h.Vector(); shaft_v.record(Simulator.dend(record_loc)._ref_v)
-
-	if Simulator.soma:
-		soma_v = h.Vector(); soma_v.record(Simulator.soma(0.5)._ref_v)
-	else:
-		soma_v = [] # Reset soma_v between simulations
-
-	if Simulator.spine_heads:
-		spine_v = h.Vector(); spine_v.record(Simulator.spine_heads[record_loc_idx](1)._ref_v)
-	else:
-		spine_v = [] # Reset spine_v between simulations
-
-	# Run simulation
-	h.finitialize(); h.run()
-
-	# Plot traces
-	Simulator.vectors['t'] = t
-	Simulator.vectors['shaft_v'] = shaft_v
-	Simulator.vectors['soma_v'] = soma_v
-	Simulator.vectors['spine_v'] = spine_v
-	
 	VoltRadio_callback([], [], [])
 
 def Reset_callback():
@@ -314,12 +282,14 @@ def EntryTracking_callback(a, b, c):
 			'Warning: You changed something! Press \'Update Morphology\' to implement changes before running simulation')
 
 # ================================================ Initialize Parameters =================================================
-
+#! Add logs
 colors = {	'dend': 'black', 
 			'soma': 'lightblue', 
 			'spine_neck': 'royalblue', 
 			'spine_head': 'darkblue'}
 
+# !Get this inside Simulator and if arguments not given, default to it
+# All elements in this dictionary will appear as entries in GUI (separate keys for separate blocks)
 UserParamDict = {
 'simulation': OrderedDict([
 	('dend.L', [u'Branch Length [\u03BCm]', 80]), 
@@ -344,11 +314,11 @@ UserParamDict = {
 	('neck_diam', [u'Neck diam [\u03BCm]', 0.0394]),
 	('neck_L', [u'Neck L [\u03BCm]', 1]),
 	('neck_Ra', [u'Neck Ra (per unit area) [\u03A9-cm]', 50]),
-	('head_radius', [u'Head radius [\u03BCm]', 0.297])
+	('head_radius', [u'Head radius [\u03BCm]', 0.297])	
 	]),
 'soma': OrderedDict([
 	('soma.diam', [u'diam [\u03BCm]', 10]),
-	('soma.cm', [u'Cm [\u03BCF/cm\u00B2]', 1])
+	('soma.cm', [u'Cm [\u03BCF/cm\u00B2]', 1])	
 	])
 }
 
@@ -368,7 +338,6 @@ Simulator.CreateCompartment('dend',
 	e_pas = UserParamDict['simulation']['h.v_init'][1], 
 	g_pas = 1.0 / 1500.0, 
 	nseg = int(UserParamDict['simulation']['dend.L'][1]) * 5)
-
 
 # ================================================ Create GUI - Main Window (root) =================================================	
 GUI.AddLabel(GUI, text='Cable Simulation GUI', font=('TkDefaultFont', 30), foreground='darkred', background='white', sticky='W')
@@ -423,15 +392,9 @@ GUI.AddEntries(GUI.Tabs['param_tab'], 'soma', UserParamDict['soma'],
 
 # Add text presented to user
 GUI.AddLabel(GUI.Tabs['param_tab'], text='Calculated Values', font=15, row=reported_dim[0], column=reported_dim[1])
-
-GUI.AddLabel(GUI.Tabs['param_tab'], varName='lambda', font=15, fg='darkgreen', 
-						row=reported_dim[0]+1, column=reported_dim[1], padx=5, sticky='WE')
-GUI.AddLabel(GUI.Tabs['param_tab'], varName='Ri', font=15, fg='darkgreen', 
-						row=reported_dim[0]+2, column=reported_dim[1], padx=5, sticky='WE')
-GUI.AddLabel(GUI.Tabs['param_tab'], varName='n_exc', font=15, fg='darkgreen', 
-						row=reported_dim[0]+3, column=reported_dim[1], padx=5, sticky='WE')
-GUI.AddLabel(GUI.Tabs['param_tab'], varName='n_inh', font=15, fg='darkgreen', 
-								row=reported_dim[0]+4, column=reported_dim[1], padx=5, sticky='WE')
+for i, name in enumerate(['lambda', 'Ri', 'n_exc', 'n_inh']):
+	GUI.AddLabel(GUI.Tabs['param_tab'], varName=name, font=15, fg='darkgreen',
+						row=reported_dim[0]+i+1, column=reported_dim[1], padx=5, sticky='We')
 UpdatePresentedValues(GUI.ChangingLabels)
 
 GUI.AddLabel(GUI.Tabs['param_tab'], varName='errors', font=15, column=0, columnspan=10, padx=5, sticky='WE')
@@ -459,4 +422,3 @@ print('*****\nTO DO:\n \
 	- In freeze plots think of option to go freeze in all compartments (maybe put on different axes and show one each time if possible?)\n\
 	- IMPORTANT: After updating entry params make sure real values update!\n*****')
 
-# GUI.mainloop() 
