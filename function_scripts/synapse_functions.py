@@ -110,10 +110,7 @@ def PutSpines(section_type, sec_obj, spine_locs, neck_diam = 0, neck_len = 0, he
 	"""
 
 	dend_ref = h.SectionRef(sec_obj)
-	neck_diam = neck_diam
-	neck_len = neck_len
-	head_radius = head_radius
-	
+
 	spine_heads, spine_necks = [], []
 	for i in range(len(spine_locs)):
 		# temp_neck = h.Section(name='spine_neck[%i]'%i)
